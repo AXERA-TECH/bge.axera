@@ -35,7 +35,7 @@ endfunction()
 
 build_test(test_enum_devices tests/test_enum_devices.cpp)
 build_test(test_model tests/test_model.cpp)
-build_test(test_tokenizer tests/tokenizer/test_tokenizer.cpp)
+build_test(main_api tests/main_api.cpp)
 
 
 install(TARGETS bge

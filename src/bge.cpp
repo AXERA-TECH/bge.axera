@@ -10,6 +10,7 @@
 #include <memory>
 #include "mmap.hpp"
 #include "tokenizer/tokenizer.hpp"
+#include "tokenizer/bge_tokenizer.h"
 #include <cmath>
 
 AxclApiLoader &getLoader();
@@ -88,7 +89,10 @@ int ax_embeding_init(embeding_attr_t *init_info, embeding_handle_t *handle)
 
     internal->runner = runner;
 
-    internal->tokenizer.reset(MNN::Transformer::Tokenizer::createTokenizer(init_info->tokenizer_model));
+    std::string tok_data(
+        reinterpret_cast<const char *>(bge_tokenizer_txt),
+        static_cast<size_t>(bge_tokenizer_txt_len));
+    internal->tokenizer.reset(MNN::Transformer::Tokenizer::createTokenizerFromData(tok_data));
     if (internal->tokenizer == nullptr)
     {
         ALOGE("create tokenizer failed");
@@ -157,6 +161,7 @@ float ax_similarity(embeding_t *embeding_1, embeding_t *embeding_2)
     float sim = 0.0f;
     for (int i = 0; i < TOKEN_FEATURE_DIM; i++)
         sim += embeding_1->embeding[i] * embeding_2->embeding[i];
-    sim = sim < 0 ? 0 : sim > 1 ? 1 : sim;
+    sim = sim < 0 ? 0 : sim > 1 ? 1
+                                : sim;
     return sim;
 }

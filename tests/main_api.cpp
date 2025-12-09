@@ -1,10 +1,23 @@
 #include "bge.h"
 #include "utils/cmdline.hpp"
+#include "utils/httplib.h"
+#include "utils/json.hpp"
 #include <fstream>
 #include <cstring>
+#include <signal.h>
+
+httplib::Server svr;
+
+void _signal(int signo)
+{
+    svr.stop();
+}
 
 int main(int argc, char *argv[])
 {
+    signal(SIGINT, _signal);
+    signal(SIGTERM, _signal);
+
     ax_devices_t ax_devices;
     memset(&ax_devices, 0, sizeof(ax_devices_t));
     if (ax_dev_enum_devices(&ax_devices) != 0)
@@ -32,6 +45,7 @@ int main(int argc, char *argv[])
 
     cmdline::parser parser;
     parser.add<std::string>("model", 'm', "encoder model(onnx model or axmodel)", true);
+    parser.add<int>("port", 'p', "port number", false, 8080);
     parser.parse_check(argc, argv);
 
     sprintf(init_info.filename_axmodel, "%s", parser.get<std::string>("model").c_str());
@@ -56,20 +70,29 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    std::vector<std::string> sentences_1 = {"I really love math", "so do I"};
-    std::vector<std::string> sentences_2 = {"I pretty like mathematics", "same as me"};
+    svr.Post("/embedding", [&](const httplib::Request &req, httplib::Response &res)
+             {
+                 try
+                 {
+                     std::string sentence = nlohmann::json::parse(req.body)["sentence"];
+                     embeding_t embeding;
+                     ax_embeding(handle, (char *)sentence.c_str(), &embeding);
 
-    for (int i = 0; i < sentences_1.size(); i++)
-    {
-        embeding_t embeding_1, embeding_2;
-        ax_embeding(handle, (char *)sentences_1[i].c_str(), &embeding_1);
-        for (int j = 0; j < sentences_2.size(); j++)
-        {
-            ax_embeding(handle, (char *)sentences_2[j].c_str(), &embeding_2);
-            float sim = ax_similarity(&embeding_1, &embeding_2);
-            printf("similarity between \33[32m%s\33[0m and \33[34m%s\33[0m is %f\n", sentences_1[i].c_str(), sentences_2[j].c_str(), sim);
-        }
-    }
+                     nlohmann::json json;
+                     json["embedding"] = embeding.embeding;
+
+                     res.set_content(json.dump(), "application/json");
+                 }
+                 catch (const std::exception &e)
+                 {
+                     res.set_content(e.what(), "text/plain");
+                     return;
+                 } });
+
+    printf("listen http://0.0.0.0:%d\n", parser.get<int>("port"));
+    printf("for example: \n    curl -X POST http://0.0.0.0:%d/embedding -H \"Content-Type: application/json\" -d '{\"sentence\":\"I really love math\"}'\n", parser.get<int>("port"));
+    printf("press Ctrl+C to stop\n");
+    svr.listen("0.0.0.0", parser.get<int>("port"));
 
     ax_embeding_deinit(handle);
 

@@ -75,13 +75,14 @@ public:
     Tokenizer() = default;
     virtual ~Tokenizer() = default;
     static Tokenizer* createTokenizer(const std::string& filename);
+    static Tokenizer* createTokenizerFromData(const std::string& tok_data);
     bool is_stop(int token);
     bool is_special(int token);
     std::vector<int> encode(const std::string& str);
     virtual std::string decode(int id) = 0;
 protected:
-    virtual void load_special(std::ifstream& file);
-    virtual bool load_vocab(std::ifstream& file) = 0;
+    virtual void load_special(std::istream& file);
+    virtual bool load_vocab(std::istream& file) = 0;
     virtual void encode(const std::string& str, std::vector<int>& ids) = 0;
     std::vector<int> special_tokens_;
     std::vector<int> stop_tokens_;
@@ -93,7 +94,7 @@ public:
     Sentencepiece() = default;
     virtual std::string decode(int id) override;
 protected:
-    virtual bool load_vocab(std::ifstream& file) override;
+    virtual bool load_vocab(std::istream& file) override;
     virtual void encode(const std::string& str, std::vector<int>& ids) override;
 private:
     enum ModelType {
@@ -145,7 +146,7 @@ public:
     Tiktoken() = default;
     virtual std::string decode(int id) override;
 protected:
-    virtual bool load_vocab(std::ifstream& file) override;
+    virtual bool load_vocab(std::istream& file) override;
     virtual void encode(const std::string& str, std::vector<int>& ids) override;
     std::unordered_map<std::string, int> encoder_;
     std::vector<std::string> decoder_;
@@ -174,7 +175,7 @@ public:
     HuggingfaceTokenizer() = default;
     virtual std::string decode(int id) override;
 protected:
-    virtual bool load_vocab(std::ifstream& file) override;
+    virtual bool load_vocab(std::istream& file) override;
     virtual void encode(const std::string& str, std::vector<int>& ids) override;
 private:
     void bpe(const std::wstring& token, const BPERanks& bpe_ranks, std::vector<std::wstring>* result);

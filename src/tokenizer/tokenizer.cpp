@@ -127,6 +127,53 @@ Tokenizer* Tokenizer::createTokenizer(const std::string& filename) {
     return tokenizer;
 }
 
+Tokenizer *Tokenizer::createTokenizerFromData(const std::string &tok_data)
+{
+    Tokenizer* tokenizer = nullptr;
+    // check file
+    std::istringstream tok_file(tok_data);
+    if (!tok_file.good()) {
+        printf("Failed: can't load tokenzier from data.\n");
+        return tokenizer;
+    }
+    // check tokenizer info
+    std::string line;
+    std::getline(tok_file, line);
+    std::istringstream line_str(line);
+    int magic_number, tokenizer_type;
+    line_str >> magic_number;
+    if (magic_number != MAGIC_NUMBER) {
+        printf("Failed: magic number is wrong from data.\n");
+        return tokenizer;
+    }
+    line_str >> tokenizer_type;
+    printf("tokenizer_type = %d\n", tokenizer_type);
+    // create tokenizer
+    switch (tokenizer_type)
+    {
+        case SENTENCEPIECE:
+            tokenizer = new Sentencepiece();
+            break;
+        case TIKTOIKEN:
+            tokenizer = new Tiktoken();
+            break;
+        case BERT:
+            tokenizer = new BertTokenizer();
+            break;
+        case HUGGINGFACE:
+            tokenizer = new HuggingfaceTokenizer();
+            break;
+        default:
+            return tokenizer;
+    }
+    // load special tokens
+    tokenizer->load_special(tok_file);
+    // load vocabs
+    tokenizer->load_vocab(tok_file);
+    // tok_file.close();
+    return tokenizer;
+}
+
 bool Tokenizer::is_stop(int token) {
     return std::find(stop_tokens_.begin(), stop_tokens_.end(), token) != stop_tokens_.end();
 }
@@ -135,7 +182,7 @@ bool Tokenizer::is_special(int token) {
     return std::find(special_tokens_.begin(), special_tokens_.end(), token) != special_tokens_.end();
 }
 
-void Tokenizer::load_special(std::ifstream& tok_file) {
+void Tokenizer::load_special(std::istream& tok_file) {
     std::string line;
     std::getline(tok_file, line);
     std::istringstream line_str(line);
@@ -195,7 +242,7 @@ std::vector<int> Tokenizer::encode(const std::string& str) {
     return ids;
 }
 
-bool Sentencepiece::load_vocab(std::ifstream& tok_file) {
+bool Sentencepiece::load_vocab(std::istream& tok_file) {
     std::string line, token;
     std::getline(tok_file, line);
     int vocab_len = std::stoi(line);
@@ -431,7 +478,7 @@ bool Sentencepiece::is_control(int id) const {
     return sentence_pieces_[id].type == PieceType::CONTROL;
 }
 
-bool Tiktoken::load_vocab(std::ifstream& tok_file) {
+bool Tiktoken::load_vocab(std::istream& tok_file) {
     std::string line;
     std::getline(tok_file, line);
     int vocab_len = std::stoi(line);
@@ -595,7 +642,7 @@ void byte_encode_token(const std::string& token,
     }
 }
 
-bool HuggingfaceTokenizer::load_vocab(std::ifstream& tok_file) {
+bool HuggingfaceTokenizer::load_vocab(std::istream& tok_file) {
     std::string line, token;
     // get nums
     int vocab_len, merge_len;

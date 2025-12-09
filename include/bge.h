@@ -15,7 +15,6 @@ extern "C"
         int devid;
         
         char filename_axmodel[1024];
-        char tokenizer_model[1024];
     } embeding_attr_t;
 
     typedef struct
