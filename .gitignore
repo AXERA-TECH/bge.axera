@@ -1,0 +1,3 @@
+build*
+.vscode
+pybge/__pycache__
